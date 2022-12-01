@@ -31,3 +31,7 @@ html,
 body {
   min-height: 100%;
 }
+
+.mi-auto {
+  margin-inline: auto;
+}
