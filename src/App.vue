@@ -29,10 +29,17 @@ const spawnPos = {
 // prettier-ignore
 const snakeState = {
   coords: [spawnPos,
-  { ...spawnPos, x: spawnPos.x + SQUARE_SIZE },
-  { ...spawnPos, x: spawnPos.x + 2 * SQUARE_SIZE },
-  { ...spawnPos, x: spawnPos.x + 3 * SQUARE_SIZE }],
+    { ...spawnPos, x: spawnPos.x + SQUARE_SIZE },
+    { ...spawnPos, x: spawnPos.x + 2 * SQUARE_SIZE },
+    { ...spawnPos, x: spawnPos.x + 3 * SQUARE_SIZE }
+  ],
   dir: DIR_LEFT,
+  // coords: [spawnPos,
+  //   { ...spawnPos, x: spawnPos.x - SQUARE_SIZE },
+  //   { ...spawnPos, x: spawnPos.x - 2 * SQUARE_SIZE },
+  //   { ...spawnPos, x: spawnPos.x - 3 * SQUARE_SIZE }
+  // ],
+  // dir: DIR_RIGHT,
 };
 
 onMounted(() => {
@@ -47,14 +54,25 @@ onMounted(() => {
   setInterval(() => {
     // DETERMINE NEW HEAD POSITION
     const currentHead = snakeState.coords[0];
-    if (snakeState.dir === DIR_LEFT) {
-      // prettier-ignore
-      snakeState.coords.unshift({
-        x: currentHead.x > 0
-          ? currentHead.x - SQUARE_SIZE
-          : CANVAS_WIDTH / PIXEL_SIZE - SQUARE_SIZE,
-        y: currentHead.y,
-      });
+    switch (snakeState.dir) {
+      case DIR_LEFT:
+        // prettier-ignore
+        snakeState.coords.unshift({
+          x: currentHead.x > 0
+            ? currentHead.x - SQUARE_SIZE
+            : CANVAS_WIDTH / PIXEL_SIZE - SQUARE_SIZE,
+          y: currentHead.y,
+        });
+        break;
+      case DIR_RIGHT:
+        // prettier-ignore
+        snakeState.coords.unshift({
+          x: currentHead.x + SQUARE_SIZE < CANVAS_WIDTH / PIXEL_SIZE 
+            ? currentHead.x + SQUARE_SIZE
+            : 0,
+          y: currentHead.y,
+        });
+        break;
     }
     snakeState.coords.pop();
 
@@ -69,13 +87,21 @@ onMounted(() => {
   // });
 });
 
-const drawSquare = (x, y, stripe) => {
-  if (stripe) {
-    /// ONE SQUARE SLANT = \
-    // bot left
-    drawGreenPx(wrapxc(x), wrapyc(y + 2));
-    // top right
-    drawGreenPx(wrapxc(x + 1), wrapyc(y + 1));
+const drawGreenSquare = (x, y, striped) => {
+  if (striped) {
+    if (snakeState.dir === DIR_LEFT) {
+      /// ONE SQUARE SLANT = \
+      // bot left
+      drawGreenPx(x, y + 2);
+      // top right
+      drawGreenPx(x + 1, y + 1);
+    } else if (snakeState.dir === DIR_RIGHT) {
+      /// ONE SQUARE SLANT = /
+      // bot right
+      drawGreenPx(x + 1, y + 2);
+      // top left
+      drawGreenPx(x, y + 1);
+    }
   } else {
     drawGreenPx(x, y + 1);
     drawGreenPx(x, y + 2);
@@ -87,7 +113,11 @@ const drawSquare = (x, y, stripe) => {
 const drawSnake = () => {
   const X_CELLS = CANVAS_WIDTH / PIXEL_SIZE;
   const Y_CELLS = CANVAS_HEIGHT / PIXEL_SIZE;
-  const wrapxc = (xc) => (xc >= X_CELLS ? xc - X_CELLS : xc);
+  const wrapxc = (xc) => {
+    if (xc >= X_CELLS) return xc - X_CELLS;
+    if (xc < 0) return X_CELLS + xc;
+    return xc;
+  };
   const wrapyc = (yc) => (yc >= Y_CELLS ? yc - X_CELLS : yc);
 
   const { coords, dir } = snakeState;
@@ -97,32 +127,42 @@ const drawSnake = () => {
 
   /// HEAD
   // MOUTH
-  drawSquare(head.x, head.y);
+  drawGreenSquare(head.x, head.y);
   // EYE
-  drawGreenPx(head.x + SQUARE_SIZE, head.y + 2);
-  drawGreenPx(head.x + SQUARE_SIZE, head.y + 0);
-  drawGreenPx(head.x + SQUARE_SIZE + 1, head.y + 1);
-  drawGreenPx(head.x + SQUARE_SIZE + 1, head.y + 2);
+  if (dir === DIR_LEFT) {
+    drawGreenPx(wrapxc(head.x + SQUARE_SIZE), wrapyc(head.y));
+    drawGreenPx(wrapxc(head.x + SQUARE_SIZE), wrapyc(head.y + 2));
+    drawGreenPx(wrapxc(head.x + SQUARE_SIZE + 1), wrapyc(head.y + 1));
+    drawGreenPx(wrapxc(head.x + SQUARE_SIZE + 1), wrapyc(head.y + 2));
+  } else if (dir === DIR_RIGHT) {
+    drawGreenPx(wrapxc(head.x - SQUARE_SIZE + 1), wrapyc(head.y));
+    drawGreenPx(wrapxc(head.x - SQUARE_SIZE + 1), wrapyc(head.y + 2));
+    drawGreenPx(wrapxc(head.x - SQUARE_SIZE), wrapyc(head.y + 1));
+    drawGreenPx(wrapxc(head.x - SQUARE_SIZE), wrapyc(head.y + 2));
+  }
 
-  // //BODY
-  // // ONE SEGMENT (STRIPED)
-  // drawGreenPx(x + 5, y + 2);
-  // drawGreenPx(x + 6, y + 1);
-  // // ONE SEGMENT (SOLID)
-  // drawGreenPx(x + 7, y + 1);
-  // drawGreenPx(x + 7, y + 2);
-  // drawGreenPx(x + 8, y + 1);
-  // drawGreenPx(x + 8, y + 2);
+  //// BODY
+  coords.slice(1, len - 1).forEach((coord, i) => {
+    if (DIR_LEFT === dir) {
+      drawGreenSquare(wrapxc(coord.x + SQUARE_SIZE), wrapyc(coord.y), !(i % 3));
+    } else if (DIR_RIGHT === dir) {
+      drawGreenSquare(wrapxc(coord.x - SQUARE_SIZE), wrapyc(coord.y), !(i % 3));
+    }
+  });
 
-  // // TAIL
-  // drawGreenPx(x + 9, y + 2);
-  // drawGreenPx(x + 10, y + 1);
-  // drawGreenPx(x + 11, y + 1);
-  // drawGreenPx(x + 11, y + 2);
-  // drawGreenPx(x + 12, y + 1);
-  // drawGreenPx(x + 12, y + 2);
-  // drawGreenPx(x + 13, y + 2);
-  // drawGreenPx(x + 14, y + 2);
+  /// TAIL
+  // ONE SEGMENT (STRIPED)
+  if (dir === DIR_LEFT) {
+    drawGreenPx(wrapxc(tail.x + 2), wrapyc(tail.y + 2));
+    drawGreenPx(wrapxc(tail.x + 3), wrapyc(tail.y + 1));
+    drawGreenPx(wrapxc(tail.x + 4), wrapyc(tail.y + 2));
+    drawGreenPx(wrapxc(tail.x + 5), wrapyc(tail.y + 2));
+  } else if (dir === DIR_RIGHT) {
+    drawGreenPx(wrapxc(tail.x - 2 * SQUARE_SIZE + 3), wrapyc(tail.y + 2));
+    drawGreenPx(wrapxc(tail.x - 2 * SQUARE_SIZE + 2), wrapyc(tail.y + 1));
+    drawGreenPx(wrapxc(tail.x - 2 * SQUARE_SIZE + 1), wrapyc(tail.y + 2));
+    drawGreenPx(wrapxc(tail.x - 2 * SQUARE_SIZE), wrapyc(tail.y + 2));
+  }
 };
 
 const drawGreenPx = (x, y) => {
