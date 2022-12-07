@@ -21,16 +21,16 @@ let context;
 const canvas = ref(null);
 
 // prettier-ignore
-const spawnPos = { 
-  x: CANVAS_WIDTH / PIXEL_SIZE / SQUARE_SIZE, 
-  y: CANVAS_HEIGHT / PIXEL_SIZE / SQUARE_SIZE 
+const spawnPos = {
+  x: CANVAS_WIDTH / PIXEL_SIZE / SQUARE_SIZE,
+  y: CANVAS_HEIGHT / PIXEL_SIZE / SQUARE_SIZE
 };
 
 // prettier-ignore
 const snakeState = {
-  coords: [spawnPos, 
-  { ...spawnPos, x: spawnPos.x + SQUARE_SIZE }, 
-  { ...spawnPos, x: spawnPos.x + 2 * SQUARE_SIZE }, 
+  coords: [spawnPos,
+  { ...spawnPos, x: spawnPos.x + SQUARE_SIZE },
+  { ...spawnPos, x: spawnPos.x + 2 * SQUARE_SIZE },
   { ...spawnPos, x: spawnPos.x + 3 * SQUARE_SIZE }],
   dir: DIR_LEFT,
 };
@@ -42,48 +42,87 @@ onMounted(() => {
 
   fillBg("#4F822B");
 
-  drawSnake(11, 11);
+  drawSnake();
 
-  drawGrid({
-    drawFirstLine: true,
-    color: "#4F822B88",
-  });
+  setInterval(() => {
+    // DETERMINE NEW HEAD POSITION
+    const currentHead = snakeState.coords[0];
+    if (snakeState.dir === DIR_LEFT) {
+      // prettier-ignore
+      snakeState.coords.unshift({
+        x: currentHead.x > 0
+          ? currentHead.x - SQUARE_SIZE
+          : CANVAS_WIDTH / PIXEL_SIZE - SQUARE_SIZE,
+        y: currentHead.y,
+      });
+    }
+    snakeState.coords.pop();
+
+    // TODO DONT RESET, JUST ERASE SNAKE USING COORDS ARRAY
+    reset();
+
+    drawSnake();
+  }, TICKRATE);
+  // drawGrid({
+  //   drawFirstLine: true,
+  //   color: "#4F822B88",
+  // });
 });
 
-const drawSnake = (x, y) => {
-  // TODO draw snake: 1 'pixelset' for tail, 1 for body, one for head. 1 for tongue?
+const drawSquare = (x, y, stripe) => {
+  if (stripe) {
+    /// ONE SQUARE SLANT = \
+    // bot left
+    drawGreenPx(wrapxc(x), wrapyc(y + 2));
+    // top right
+    drawGreenPx(wrapxc(x + 1), wrapyc(y + 1));
+  } else {
+    drawGreenPx(x, y + 1);
+    drawGreenPx(x, y + 2);
+    drawGreenPx(x + 1, y + 1);
+    drawGreenPx(x + 1, y + 2);
+  }
+};
 
-  //HEAD
+const drawSnake = () => {
+  const X_CELLS = CANVAS_WIDTH / PIXEL_SIZE;
+  const Y_CELLS = CANVAS_HEIGHT / PIXEL_SIZE;
+  const wrapxc = (xc) => (xc >= X_CELLS ? xc - X_CELLS : xc);
+  const wrapyc = (yc) => (yc >= Y_CELLS ? yc - X_CELLS : yc);
+
+  const { coords, dir } = snakeState;
+  const len = coords.length;
+  const head = coords[0];
+  const tail = coords[len - 1];
+
+  /// HEAD
   // MOUTH
-  drawGreenPx(x + 1, y + 1);
-  drawGreenPx(x + 1, y + 2);
-  drawGreenPx(x + 2, y + 1);
-  drawGreenPx(x + 2, y + 2);
+  drawSquare(head.x, head.y);
   // EYE
-  drawGreenPx(x + 3, y + 2);
-  drawGreenPx(x + 3, y + 0);
-  drawGreenPx(x + 4, y + 1);
-  drawGreenPx(x + 4, y + 2);
+  drawGreenPx(head.x + SQUARE_SIZE, head.y + 2);
+  drawGreenPx(head.x + SQUARE_SIZE, head.y + 0);
+  drawGreenPx(head.x + SQUARE_SIZE + 1, head.y + 1);
+  drawGreenPx(head.x + SQUARE_SIZE + 1, head.y + 2);
 
-  //BODY
-  // ONE SEGMENT (STRIPED)
-  drawGreenPx(x + 5, y + 2);
-  drawGreenPx(x + 6, y + 1);
-  // ONE SEGMENT (SOLID)
-  drawGreenPx(x + 7, y + 1);
-  drawGreenPx(x + 7, y + 2);
-  drawGreenPx(x + 8, y + 1);
-  drawGreenPx(x + 8, y + 2);
+  // //BODY
+  // // ONE SEGMENT (STRIPED)
+  // drawGreenPx(x + 5, y + 2);
+  // drawGreenPx(x + 6, y + 1);
+  // // ONE SEGMENT (SOLID)
+  // drawGreenPx(x + 7, y + 1);
+  // drawGreenPx(x + 7, y + 2);
+  // drawGreenPx(x + 8, y + 1);
+  // drawGreenPx(x + 8, y + 2);
 
-  // TAIL
-  drawGreenPx(x + 9, y + 2);
-  drawGreenPx(x + 10, y + 1);
-  drawGreenPx(x + 11, y + 1);
-  drawGreenPx(x + 11, y + 2);
-  drawGreenPx(x + 12, y + 1);
-  drawGreenPx(x + 12, y + 2);
-  drawGreenPx(x + 13, y + 2);
-  drawGreenPx(x + 14, y + 2);
+  // // TAIL
+  // drawGreenPx(x + 9, y + 2);
+  // drawGreenPx(x + 10, y + 1);
+  // drawGreenPx(x + 11, y + 1);
+  // drawGreenPx(x + 11, y + 2);
+  // drawGreenPx(x + 12, y + 1);
+  // drawGreenPx(x + 12, y + 2);
+  // drawGreenPx(x + 13, y + 2);
+  // drawGreenPx(x + 14, y + 2);
 };
 
 const drawGreenPx = (x, y) => {
@@ -109,9 +148,15 @@ const drawGrid = (options) => {
   context.strokeStyle = color;
   context.stroke();
 };
+
+const reset = () => {
+  context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  fillBg("#4F822B");
+};
 </script>
 
 <template>
+  <button @click="reset">reset</button>
   <canvas ref="canvas" :height="CANVAS_HEIGHT" :width="CANVAS_WIDTH" class="mi-auto border border-white" />
 </template>
 
