@@ -26,21 +26,18 @@ const spawnPos = {
   y: CANVAS_HEIGHT / PIXEL_SIZE / SQUARE_SIZE
 };
 
-// prettier-ignore
-const snakeState = {
-  coords: [spawnPos,
-    { ...spawnPos, x: spawnPos.x + SQUARE_SIZE },
-    { ...spawnPos, x: spawnPos.x + 2 * SQUARE_SIZE },
-    { ...spawnPos, x: spawnPos.x + 3 * SQUARE_SIZE }
-  ],
+const initleftdirstate = {
+  coords: [spawnPos, { ...spawnPos, x: spawnPos.x + SQUARE_SIZE }, { ...spawnPos, x: spawnPos.x + 2 * SQUARE_SIZE }, { ...spawnPos, x: spawnPos.x + 3 * SQUARE_SIZE }],
   dir: DIR_LEFT,
-  // coords: [spawnPos,
-  //   { ...spawnPos, x: spawnPos.x - SQUARE_SIZE },
-  //   { ...spawnPos, x: spawnPos.x - 2 * SQUARE_SIZE },
-  //   { ...spawnPos, x: spawnPos.x - 3 * SQUARE_SIZE }
-  // ],
-  // dir: DIR_RIGHT,
 };
+
+const initrightdirstate = {
+  coords: [spawnPos, { ...spawnPos, x: spawnPos.x - SQUARE_SIZE }, { ...spawnPos, x: spawnPos.x - 2 * SQUARE_SIZE }, { ...spawnPos, x: spawnPos.x - 3 * SQUARE_SIZE }],
+  dir: DIR_RIGHT,
+};
+
+const snakeState = initrightdirstate;
+const latestKeydown = ref(null);
 
 onMounted(() => {
   context = canvas.value.getContext("2d", {
@@ -52,6 +49,11 @@ onMounted(() => {
   drawSnake();
 
   setInterval(() => {
+    // consume whatever the latest keydown is
+    if (latestKeydown.value) {
+      snakeState.dir = latestKeydown.value;
+      latestKeydown.value = null;
+    }
     // DETERMINE NEW HEAD POSITION
     const currentHead = snakeState.coords[0];
     switch (snakeState.dir) {
@@ -67,7 +69,7 @@ onMounted(() => {
       case DIR_RIGHT:
         // prettier-ignore
         snakeState.coords.unshift({
-          x: currentHead.x + SQUARE_SIZE < CANVAS_WIDTH / PIXEL_SIZE 
+          x: currentHead.x + SQUARE_SIZE < CANVAS_WIDTH / PIXEL_SIZE
             ? currentHead.x + SQUARE_SIZE
             : 0,
           y: currentHead.y,
@@ -193,11 +195,33 @@ const reset = () => {
   context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   fillBg("#4F822B");
 };
+
+const onkeydown = (event) => {
+  console.log("invoke onkeydown");
+  const ACCEPTED_DIR_KEYCODES = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyS", "KeyA", "KeyD", "KeyK", "KeyJ", "KeyH", "KeyL"];
+  const i = ACCEPTED_DIR_KEYCODES.indexOf(event.code);
+  switch (i % 4) {
+    case 0:
+      latestKeydown.value = DIR_UP;
+      break;
+    case 1:
+      latestKeydown.value = DIR_DOWN;
+      break;
+    case 2:
+      latestKeydown.value = DIR_LEFT;
+      break;
+    case 3:
+      latestKeydown.value = DIR_RIGHT;
+      break;
+    default:
+  }
+};
 </script>
 
 <template>
+  {{ latestKeydown }}
   <button @click="reset">reset</button>
-  <canvas ref="canvas" :height="CANVAS_HEIGHT" :width="CANVAS_WIDTH" class="mi-auto border border-white" />
+  <canvas autofocus tabindex="0" @keydown="onkeydown" ref="canvas" :height="CANVAS_HEIGHT" :width="CANVAS_WIDTH" class="mi-auto border border-white" />
 </template>
 
 <style>
